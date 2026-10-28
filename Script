@@ -1,0 +1,90 @@
+script--// Target Orbit Hub with Draggable UI & Hide/Show
+local P, RS, LP = game:GetService("Players"), game:GetService("RunService"), game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
+local C = {E=false,N="",R=8,S=3,P="HumanoidRootPart"}
+local ang, tC, vU = 0, nil, true
+local SG = Instance.new("ScreenGui", game.CoreGui)
+
+-- Hàm hỗ trợ kéo thả bất kỳ khung/nút nào trên màn hình mobile/PC
+local function MakeDraggable(obj)
+    local dragging, dragInput, dragStart, startPos
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- Nút Thu nhỏ / Hiện Menu (Có thể kéo đi chỗ khác)
+local HB = Instance.new("TextButton", SG) HB.Size, HB.Position, HB.BackgroundColor3, HB.Text, HB.TextColor3, HB.TextSize = UDim2.new(0,35,0,35), UDim2.new(0.05,0,0.14,0), Color3.fromRGB(40,40,40), "👁️", Color3.new(1,1,1), 14
+Instance.new("UICorner", HB).CornerRadius = UDim.new(0,6)
+MakeDraggable(HB)
+
+-- Khung Menu chính (Có thể kéo thả toàn bộ bảng)
+local MF = Instance.new("Frame", SG) MF.Size, MF.Position, MF.BackgroundColor3 = UDim2.new(0,220,0,205), UDim2.new(0.05,0,0.2,0), Color3.fromRGB(30,30,30) MF.BorderSizePixel = 0
+Instance.new("UICorner", MF).CornerRadius = UDim.new(0,8)
+MakeDraggable(MF)
+
+local NB = Instance.new("TextBox", MF) NB.Size, NB.Position, NB.BackgroundColor3, NB.PlaceholderText, NB.Text, NB.TextColor3, NB.TextSize = UDim2.new(0.9,0,0,35), UDim2.new(0.05,0,0.06,0), Color3.fromRGB(50,50,50), "Nhập tên địch mới...", "", Color3.new(1,1,1), 12
+Instance.new("UICorner", NB).CornerRadius = UDim.new(0,6)
+
+local RB = Instance.new("TextButton", MF) RB.Size, RB.Position, RB.BackgroundColor3, RB.Text, RB.TextColor3, RB.TextSize = UDim2.new(0.9,0,0,35), UDim2.new(0.05,0,0.32,0), Color3.fromRGB(70,130,180), "🔄 Cập nhật Target", Color3.new(1,1,1), 12
+Instance.new("UICorner", RB).CornerRadius = UDim.new(0,6)
+
+local TB = Instance.new("TextButton", MF) TB.Size, TB.Position, TB.BackgroundColor3, TB.Text, TB.TextColor3, TB.TextSize = UDim2.new(0.9,0,0,40), UDim2.new(0.05,0,0.58,0), Color3.fromRGB(200,50,50), "Target Farm: OFF", Color3.new(1,1,1), 13
+Instance.new("UICorner", TB).CornerRadius = UDim.new(0,6)
+
+HB.MouseButton1Click:Connect(function()
+    vU = not vU
+    MF.Visible = vU
+    HB.BackgroundColor3 = vU and Color3.fromRGB(40,40,40) or Color3.fromRGB(200,50,50)
+end)
+
+NB.FocusLost:Connect(function() C.N = NB.Text tC = nil end)
+local function getT()
+    local sN = string.lower(C.N) if sN == "" then return nil end
+    for _, pl in ipairs(P:GetPlayers()) do
+        if pl ~= LP and (string.find(string.lower(pl.Name), sN) or string.find(string.lower(pl.DisplayName), sN)) then
+            if pl.Character and pl.Character:FindFirstChild("Humanoid") and pl.Character.Humanoid.Health > 0 then
+                return pl.Character:FindFirstChild(C.P)
+            end
+        end
+    end
+    return nil
+end
+
+RB.MouseButton1Click:Connect(function() tC = getT() end)
+TB.MouseButton1Click:Connect(function()
+    C.E = not C.E
+    if C.E then TB.Text, TB.BackgroundColor3, tC = "Target Farm: ON", Color3.fromRGB(50,200,50), getT()
+    else TB.Text, TB.BackgroundColor3, tC = "Target Farm: OFF", Color3.fromRGB(200,50,50), nil end
+end)
+
+RS.RenderStepped:Connect(function(dt)
+    if C.E then
+        if not tC or not tC.Parent or tC.Parent.Humanoid.Health <= 0 then tC = getT() end
+        local mC = LP.Character
+        if tC and mC and mC:FindFirstChild("HumanoidRootPart") then
+            local rP = mC.HumanoidRootPart ang = ang + (C.S * dt)
+            local tPos = tC.Position
+            rP.CFrame = CFrame.new(Vector3.new(tPos.X + math.cos(ang)*C.R, tPos.Y, tPos.Z + math.sin(ang)*C.R), tPos)
+            rP.Velocity = Vector3.new(0,0,0)
+        end
+    end
+end)
